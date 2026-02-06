@@ -36,6 +36,57 @@ MESH is a federation protocol that connects [AMP](https://github.com/mmorris35/a
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+---
+
+## 🌡️ Killer Use Case: Sovereign IoT Sensor Network
+
+MESH + AMP turn dumb sensors into a **private, federated data network**.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                      Your Home                               │
+│                                                              │
+│   🌡️ Garage        💧 Basement       ⚡ Breaker Panel        │
+│   Temp Sensor      Humidity          Power Meter             │
+│   (amp-storage)    (amp-storage)     (amp-storage)           │
+│   ESP32 · $5       Pi Zero · $10     ESP32 · $5              │
+│        │                │                  │                 │
+│        └────────────────┼──────────────────┘                 │
+│                         │                                    │
+│                  ┌──────▼──────┐                            │
+│                  │    MESH     │                            │
+│                  │  discovers  │                            │
+│                  │  all nodes  │                            │
+│                  └──────┬──────┘                            │
+│                         │                                    │
+│    ┌────────────────────┼────────────────────┐              │
+│    │                    │                    │              │
+│    ▼                    ▼                    ▼              │
+│  📱 Phone          🏠 Home Assistant    🤖 AI Agent         │
+│  "garage temp?"    automation rules    "basement humid?"    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**No cloud. No subscription. No "service discontinued."**
+
+```bash
+# From anywhere on your network
+mesh search "temperature last 24h"
+mesh search "humidity > 60%" --sources basement
+mesh search "power anomaly"
+```
+
+Each sensor:
+- Stores readings locally with TTL (old data auto-expires)
+- Announces to MESH (discoverable by anything on your network)
+- Serves data on demand
+- Cryptographically signed (tamper-evident)
+- Runs on $5-10 hardware
+
+**This is the IoT we were promised.** Your home, your sensors, your data.
+
+---
+
 ## Design Principles
 
 ### 1. Security First
