@@ -8,6 +8,19 @@
 
 ---
 
+## 🏠 Run From Home — No VPS, No Public IP, No Open Ports
+
+```bash
+# That's it. You're on MESH. From your couch.
+cloudflared tunnel --url http://localhost:8765
+```
+
+MESH uses **Cloudflare Tunnel (free)** for NAT traversal. Everyone—nodes, relays, directories—runs from home behind NAT. All connections are outbound. No infrastructure required.
+
+**[See DEPLOYMENT.md for full setup guide →](DEPLOYMENT.md)**
+
+---
+
 ## What is MESH?
 
 MESH is a federation protocol that connects [AMP](https://github.com/mmorris35/agent-memory-protocol) (Agent Memory Protocol) nodes into a secure, decentralized knowledge network.
