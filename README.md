@@ -115,6 +115,54 @@ Because data is encrypted, sensors can live **anywhere on the public internet**:
 
 **This is zero-trust IoT.** Your sensors, anywhere in the world. Your data, encrypted in transit and at rest. Your keys, your rules.
 
+### 📻 Off-Grid: LoRa / Meshtastic Integration
+
+No internet at all? MESH works with [Meshtastic](https://meshtastic.org/) LoRa radio networks.
+
+```
+┌────────────────────────────────────────────────────────────┐
+│              WILDERNESS / DISASTER ZONE                    │
+│              (zero infrastructure)                         │
+│                                                            │
+│  🌡️ Weather      🦌 Trail Cam      🌊 Flood Gauge          │
+│  (solar+LoRa)    (solar+LoRa)      (solar+LoRa)            │
+│       │               │                 │                  │
+│       └───── LoRa Mesh (10+ km range) ─────┘               │
+│                       │                                    │
+│          tiny packets over radio mesh                      │
+│             "I exist, I have data"                         │
+│                       │                                    │
+│                ┌──────▼──────┐                            │
+│                │   Gateway   │  ← LoRa + satellite/cell   │
+│                │   Node      │     when available          │
+│                └──────┬──────┘                            │
+│                       │                                    │
+│          Full MESH sync when connectivity exists           │
+│                       │                                    │
+│                ┌──────▼──────┐                            │
+│                │    MESH     │                            │
+│                │   Network   │                            │
+│                └─────────────┘                            │
+└────────────────────────────────────────────────────────────┘
+```
+
+**Two-layer architecture:**
+1. **LoRa layer:** Immediate, low-bandwidth announcements (sensor readings, alerts)
+2. **MESH layer:** Full records sync when gateway reaches internet
+
+**Why this matters:**
+- Agricultural sensors across 1000 acres with no WiFi
+- Backcountry weather stations miles from roads
+- Disaster recovery when cell towers are down
+- Wildlife/environmental monitoring in wilderness
+- Post-infrastructure resilience
+
+**$35 Meshtastic node + solar = years of autonomous operation.**
+
+All data still encrypted. Keys still yours. Just works without the internet.
+
+**Post-infrastructure IoT.** No cell towers. No WiFi. No cloud. Just radios, sun, and cryptography.
+
 **This is the IoT we were promised.**
 
 ---
