@@ -474,3 +474,87 @@ You don't ask "please delete this."
 You delete the key.
 The content dies everywhere, forever.
 ```
+
+---
+
+## Honest Limitations
+
+### What Cryptography Cannot Do
+
+**Cryptographic revocation guarantees that *unaccessed* copies become unreadable. It cannot retroactively un-read something a human or node already decrypted.**
+
+No technology can solve this. If someone decrypted your lesson while they had key access and saved the plaintext, they have it forever. This is physics, not a bug.
+
+```
+The Analog Hole:
+┌─────────────────────────────────────────────┐
+│  Encrypted lesson ──► Decrypted in RAM      │
+│                            │                │
+│                            ▼                │
+│                    ┌───────────────┐        │
+│                    │ Copy/paste    │        │
+│                    │ Screenshot    │        │
+│                    │ Save to file  │        │
+│                    │ Write it down │        │
+│                    └───────────────┘        │
+│                            │                │
+│                            ▼                │
+│                     Plaintext copy          │
+│                  (crypto can't help)        │
+└─────────────────────────────────────────────┘
+```
+
+### What We CAN Guarantee
+
+| Scenario | Protection |
+|----------|------------|
+| Content never accessed before revoke | ✅ Permanently unreadable |
+| Backups, logs, archives (encrypted) | ✅ Permanently unreadable |
+| Compliant nodes that cached | ✅ Will delete, can't re-fetch key |
+| Node that decrypted but didn't save plaintext | ✅ Can't re-decrypt |
+| Node that saved decrypted plaintext | ❌ They have it |
+| Human who copy/pasted | ❌ They have it |
+
+### Mitigation Strategies
+
+Since we can't prevent determined bad actors, we minimize exposure:
+
+1. **Trust graph limits access**
+   - Only trusted nodes can fetch keys
+   - Fewer decryptions = fewer potential leaks
+
+2. **Audit trail**
+   - Log who fetched which keys
+   - You know who *could* have the plaintext
+
+3. **Reputation system**
+   - Leak content? Get blacklisted network-wide
+   - Social/economic consequences
+
+4. **Time-limited access**
+   - Keys can have short TTLs
+   - Reduces window of exposure
+
+5. **Legal/social layer**
+   - Terms of service
+   - Community norms
+   - "Don't be a jerk" still matters
+
+### The Right Mental Model
+
+Think of cryptographic revocation like a **self-destructing message**:
+
+- It works perfectly against passive threats (backups, forensics, archives)
+- It works well against lazy threats (compliant nodes, casual users)
+- It raises the bar significantly against active threats
+- It cannot defeat a determined adversary with a camera
+
+**This is still valuable.** Most data leaks aren't from determined adversaries—they're from forgotten backups, old logs, and systems that never got the memo to delete. Crypto handles all of those perfectly.
+
+### Summary
+
+> We are honest about our limits because security through obscurity is no security at all.
+>
+> Cryptographic revocation is powerful. It is not magic.
+>
+> Use it to protect against the 99% of threats it defeats, not the 1% it can't.
