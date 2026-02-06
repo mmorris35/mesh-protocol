@@ -320,3 +320,157 @@ Found a vulnerability? Please report responsibly:
 ---
 
 *Security is not a feature. It's the foundation.*
+
+---
+
+## Cryptographic Revocation (Hard Delete)
+
+Standard revocation is best-effort: compliant nodes honor it, but copies may persist. **Cryptographic revocation** makes content mathematically inaccessible.
+
+### Principle
+
+> The content never leaves your control. Only encrypted forms are shared. You hold the key. Revoke the key, and all copies become permanent noise.
+
+### Architecture
+
+```
+Publishing:
+  Lesson ─► AES-256-GCM encrypt ─► Encrypted blob (shared)
+                    │
+                    └─► Symmetric key (kept on your node)
+
+Reading:
+  Encrypted blob + Key fetch from author ─► Decrypted lesson
+
+Revoking:
+  Delete key ─► All encrypted blobs become unreadable
+```
+
+### Encrypted Lesson Format
+
+```typescript
+interface EncryptedLesson {
+  // Encryption metadata
+  encryption: {
+    algorithm: "aes-256-gcm";
+    keyId: string;              // Unique key identifier
+    keyEndpoint: string;        // URL to fetch key
+    nonce: string;              // Base64, 12 bytes for GCM
+    tag: string;                // Base64, GCM auth tag
+  };
+  
+  // The encrypted content
+  ciphertext: string;           // Base64 encrypted lesson JSON
+  
+  // Signature covers the encrypted form
+  signature: {
+    algorithm: "ed25519";
+    nodeId: string;
+    publicKey: string;
+    timestamp: number;
+    sig: string;
+  };
+}
+```
+
+### Key Management
+
+Keys are served by the author's node:
+
+```
+GET /mesh/v1/keys/{keyId}
+```
+
+Response (if authorized and not revoked):
+```json
+{
+  "keyId": "key_abc123",
+  "key": "base64_encoded_aes_key",
+  "expiresAt": 1710000000000
+}
+```
+
+Response (if revoked):
+```json
+{
+  "error": "KEY_REVOKED",
+  "revokedAt": 1707235200000
+}
+```
+
+### Authorization for Key Access
+
+Keys can be restricted:
+
+```typescript
+interface KeyPolicy {
+  keyId: string;
+  access: "public" | "trusted" | "explicit";
+  allowedNodes?: string[];      // For explicit access
+  minTrustScore?: number;       // For trusted access
+}
+```
+
+- `public`: Any node can fetch the key
+- `trusted`: Only nodes in your trust graph
+- `explicit`: Only specifically listed nodes
+
+### Revocation Process
+
+```bash
+mesh revoke lesson_abc123 --hard
+```
+
+This:
+1. Deletes the key from local storage
+2. Marks the keyId as revoked (returns KEY_REVOKED forever)
+3. Propagates standard revocation record to network
+4. Content is now cryptographically dead
+
+### Key Escrow (Optional)
+
+For availability when your node is offline, keys can be escrowed:
+
+```typescript
+interface KeyEscrow {
+  keyId: string;
+  escrowNodes: string[];        // Trusted nodes holding backup
+  threshold: number;            // k-of-n required to reconstruct
+  encryptedShares: string[];    // Shamir secret sharing
+}
+```
+
+Revocation must notify escrow nodes to delete their shares.
+
+### Caching Considerations
+
+Nodes MAY cache decrypted content in memory for performance. To limit exposure:
+
+1. **TTL on decrypted cache**: Re-fetch key periodically
+2. **Revocation push**: Author can push revocation to known readers
+3. **Key rotation**: Periodically rotate keys for long-lived content
+
+### Guarantees
+
+| Scenario | Outcome |
+|----------|---------|
+| Compliant node, revoked | Deletes cached content, key fetch fails |
+| Non-compliant node, revoked | Has encrypted blob, key fetch fails, content unreadable |
+| Offline/archived copy | Encrypted blob is permanent noise |
+| Backup restored | Key still revoked, content still dead |
+
+### Limitations
+
+- **RAM snapshots**: If content was decrypted in RAM and node was compromised, that instance is exposed
+- **Screenshots/copies**: If a human copied the text manually, crypto can't help
+- **Key availability**: Your node must be reachable for others to read (mitigate with escrow)
+
+### Summary
+
+Cryptographic revocation provides **mathematical certainty** that revoked content is inaccessible. It doesn't require trust in other nodes' compliance—the laws of cryptography enforce it.
+
+```
+You don't ask "please delete this."
+You delete the key.
+The content dies everywhere, forever.
+```
