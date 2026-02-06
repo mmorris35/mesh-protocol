@@ -78,12 +78,44 @@ mesh search "power anomaly"
 
 Each sensor:
 - Stores readings locally with TTL (old data auto-expires)
-- Announces to MESH (discoverable by anything on your network)
 - Serves data on demand
 - Cryptographically signed (tamper-evident)
+- **Encrypted with keys you control**
 - Runs on $5-10 hardware
 
-**This is the IoT we were promised.** Your home, your sensors, your data.
+**And here's the key insight: sensors don't need to be on your local network.**
+
+Because data is encrypted, sensors can live **anywhere on the public internet**:
+
+```
+🏔️ Remote Cabin     🏠 Rental Property    🚗 Vehicle        🌍 Anywhere
+   (satellite)         (4G LTE)            (cellular)         (internet)
+        │                   │                   │                  │
+        └───────────────────┴───────────────────┴──────────────────┘
+                                    │
+                             PUBLIC INTERNET
+                           (all data encrypted)
+                                    │
+                             ┌──────▼──────┐
+                             │    MESH     │
+                             └──────┬──────┘
+                                    │
+                         Only YOUR keys decrypt
+                                    │
+                    ┌───────────────┼───────────────┐
+                    ▼               ▼               ▼
+               📱 Phone      💻 Laptop       🤖 AI Agent
+               anywhere       anywhere        anywhere
+```
+
+**Access control via cryptography:**
+- **Share access?** Issue a key to family, tenants, contractors
+- **Revoke access?** Delete their key. Instant. Cryptographic. Done.
+- **Sensor compromised?** They get encrypted blobs. Useless without keys.
+
+**This is zero-trust IoT.** Your sensors, anywhere in the world. Your data, encrypted in transit and at rest. Your keys, your rules.
+
+**This is the IoT we were promised.**
 
 ---
 
