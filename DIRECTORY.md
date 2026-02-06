@@ -290,3 +290,79 @@ Directories do NOT see:
 ---
 
 *Directories are helpful servants, not trusted masters.*
+
+---
+
+## Who Runs Directories?
+
+**You do, if you want one to exist.**
+
+MESH is decentralized. There is no "MESH Inc" running infrastructure. No venture-funded startup maintaining servers. No cloud service to subscribe to.
+
+### The Bootstrap Problem
+
+A federated network needs someone to go first:
+
+1. **Early adopters run the first directories** — Probably on a cheap VPS or spare server
+2. **Spec includes a bootstrap list** — Known-good directories to start with
+3. **Network grows, more directories appear** — Communities, companies, enthusiasts
+4. **Federation prevents single points of failure** — No one directory is critical
+
+### Why Would Anyone Run One?
+
+| Operator | Motivation |
+|----------|------------|
+| **Protocol creators** | Bootstrap the network, prove it works |
+| **Topic communities** | "The Rust MESH directory" as community resource |
+| **Companies** | Value-add services (curation, analytics, premium features) |
+| **Enthusiasts** | Same reason people run Tor relays, Mastodon instances, BitTorrent trackers |
+| **Self-interest** | Your directory, your rules, your availability guarantee |
+
+### What It Costs
+
+Running a directory is cheap:
+
+- **Compute**: Small VPS ($5-20/month) handles significant traffic
+- **Storage**: Lessons are text, not video. Modest disk requirements.
+- **Bandwidth**: Scales with popularity, but text is tiny
+- **Maintenance**: Keep it updated, keep it online
+
+A Raspberry Pi could run a small community directory.
+
+### What If Nobody Runs One?
+
+**MESH still works.** 
+
+Directories are a convenience for discovery, not a requirement for operation. Nodes can:
+
+- Connect directly to known peers
+- Exchange peer lists with friends
+- Operate in "friends only" mode indefinitely
+
+A group of 10 friends could run MESH forever without any public directory. They'd just share node IDs out-of-band.
+
+### The Bootstrap List
+
+The spec will include a starter list of directories:
+
+```
+https://directory.amp-protocol.org    # Reference implementation
+https://mesh.example.com/directory    # Community operated
+```
+
+**These don't exist yet.** They will when someone (probably us) runs them.
+
+### Your Directory, Your Rules
+
+If you don't like how existing directories operate:
+
+1. Run your own
+2. Set your own policies
+3. Announce it to the network
+4. Let nodes choose
+
+That's the point of decentralization. No permission needed.
+
+---
+
+*Directories are community infrastructure. The community has to build them.*

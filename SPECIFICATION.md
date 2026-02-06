@@ -496,3 +496,85 @@ Key rules:
 ---
 
 *Specification draft. Subject to change based on security review.*
+
+---
+
+## 11. Consumer Access (Read-Only)
+
+Not everyone needs to run a node. MESH supports read-only access for consumers who just want to search and learn.
+
+### 11.1 Access Tiers
+
+| Tier | What you run | What you can do |
+|------|--------------|-----------------|
+| **Consumer** | Nothing (just HTTP client) | Search public content via directories |
+| **Reader Node** | Node, no publishing | Above + federated search + trust graph |
+| **Full Node** | Node + publishing | Full participation |
+
+### 11.2 Consumer Access via Directory API
+
+Anyone with `curl` can query public knowledge:
+
+```bash
+# No node, no identity, no setup
+curl -X POST https://directory.example.com/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "cargo parallel builds", "limit": 10}'
+```
+
+Response includes signed lessons. Consumers can verify signatures client-side to confirm authenticity.
+
+### 11.3 What Consumers CAN Do
+
+- Search all public content via directory APIs
+- Verify signatures (lessons are authentic)
+- Read public lessons from any node
+- Build applications on top of MESH data
+
+### 11.4 What Consumers CANNOT Do
+
+- Participate in federated (peer-to-peer) search
+- Access trust-restricted content
+- Build trust relationships
+- Publish lessons
+- Revoke anything
+
+### 11.5 Client Libraries
+
+We encourage client libraries for consumer access:
+
+```python
+# Hypothetical Python client
+from mesh import MeshClient
+
+client = MeshClient()  # No node, no identity
+results = client.search("async rust patterns")
+
+for lesson in results:
+    if lesson.verify_signature():
+        print(lesson.title, lesson.content)
+```
+
+### 11.6 Privacy for Consumers
+
+Consumers querying directories reveal:
+- Their IP address
+- What they're searching for
+
+Mitigations:
+- Use Tor/VPN
+- Query multiple directories with partial queries
+- Self-host a directory and query locally
+
+### 11.7 Why Allow Anonymous Consumption?
+
+Public knowledge should be publicly accessible. Requiring identity to *read* would:
+- Limit adoption
+- Create unnecessary barriers
+- Contradict the "share knowledge" mission
+
+Publishing requires identity (for attribution, trust, revocation). Reading doesn't.
+
+---
+
+*You don't need to run a node to benefit from MESH. Consuming is free and open.*
