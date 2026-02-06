@@ -247,6 +247,28 @@ mesh verify lesson_abc123@nodeB
 | [SECURITY.md](SECURITY.md) | Threat model and security architecture |
 | [TRUST.md](TRUST.md) | Web of trust model |
 | [DIRECTORY.md](DIRECTORY.md) | Directory protocol |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | **Zero-infrastructure deployment guide** |
+
+---
+
+## 🏠 Run From Home (Zero Infrastructure)
+
+**You don't need a VPS. You don't need a public IP. You don't need to open ports.**
+
+```bash
+# Start your node
+./amp-mini --port 8765
+
+# Expose via Cloudflare Tunnel (free, outbound-only)
+cloudflared tunnel --url http://localhost:8765
+# → https://random-words.trycloudflare.com
+
+# You're on MESH. From home. Behind NAT.
+```
+
+Everyone—nodes, relays, directories—runs from home using outbound tunnels. Cloudflare's free tier handles global routing. See [DEPLOYMENT.md](DEPLOYMENT.md) for details.
+
+**Cost:** ~$15/year (electricity + optional domain). **Privacy:** Your hardware, your home, your rules.
 
 ## Relationship to AMP
 
