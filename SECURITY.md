@@ -1,0 +1,322 @@
+# MESH Security Model
+
+> **Secure as fuck** — The guiding principle
+
+## Threat Model
+
+### Adversaries
+
+| Adversary | Capabilities | Goals |
+|-----------|--------------|-------|
+| **Passive Network Observer** | Can see traffic metadata | Learn who shares what with whom |
+| **Active Network Attacker** | Can intercept/modify traffic | Inject false lessons, impersonate nodes |
+| **Malicious Node** | Controls one or more MESH nodes | Poison knowledge base, spam, harvest data |
+| **Compromised Directory** | Controls a directory server | Censor nodes, manipulate discovery |
+| **Rogue Insider** | Has legitimate access to a node | Leak private lessons, forge attributions |
+
+### Assets to Protect
+
+1. **Private Lessons** — Must never leak without explicit publish action
+2. **Node Identity** — Must not be impersonatable
+3. **Lesson Integrity** — Content must not be tamperable
+4. **Attribution** — Author must be verifiable
+5. **Revocation** — Unpublished content must become unavailable
+6. **Query Privacy** — What you search for reveals interests
+7. **Social Graph** — Who trusts whom is sensitive
+
+---
+
+## Cryptographic Primitives
+
+### Identity
+
+Each MESH node has a **long-term identity keypair**:
+
+```
+Algorithm: Ed25519
+Private key: 32 bytes, never leaves the node
+Public key: 32 bytes, serves as node identifier
+Fingerprint: SHA-256(public_key), displayed as hex
+```
+
+**Node ID** = Base58 encoding of public key (like IPFS peer IDs)
+
+Example: `12D3KooWN7hT5qJK4vZ9kE3xP2yR8mF6wL1cD4nB2aS5gH7jU9iY`
+
+### Lesson Signing
+
+Every shared lesson includes a cryptographic signature:
+
+```typescript
+interface SignedLesson {
+  // Original AMP lesson
+  lesson: Lesson;
+  
+  // Signature metadata
+  signature: {
+    algorithm: "ed25519";
+    publicKey: string;      // Author's public key
+    timestamp: number;      // Unix ms when signed
+    signature: string;      // Base64 Ed25519 signature
+  };
+  
+  // What was signed
+  signedData: string;       // Canonical JSON of lesson + timestamp
+}
+```
+
+**Signing process:**
+1. Canonicalize lesson JSON (sorted keys, no whitespace)
+2. Append timestamp
+3. Sign with Ed25519 private key
+4. Attach signature to lesson
+
+**Verification process:**
+1. Extract signedData and signature
+2. Look up public key (from signature or directory)
+3. Verify Ed25519 signature
+4. Check timestamp is reasonable (not future, not ancient)
+5. Verify public key matches claimed author
+
+### Transport Security
+
+All MESH communication uses **TLS 1.3** minimum.
+
+```
+Required cipher suites:
+- TLS_AES_256_GCM_SHA384
+- TLS_CHACHA20_POLY1305_SHA256
+
+Certificate validation:
+- Standard PKI for initial connection
+- Node identity verified via signed challenge after TLS established
+```
+
+### Optional: End-to-End Encryption
+
+For sensitive sync between trusted nodes (not public sharing):
+
+```
+Algorithm: X25519 key exchange + XChaCha20-Poly1305
+Forward secrecy: New ephemeral keypair per session
+```
+
+---
+
+## Visibility Levels
+
+| Level | Who can see | Indexed by directories | Appears in federated search |
+|-------|-------------|------------------------|----------------------------|
+| `private` | Only you | No | No |
+| `unlisted` | Anyone with direct link | No | No |
+| `public` | Everyone | Yes | Yes |
+
+**Transitions:**
+- `private` → `public`: Publish action (signs and announces)
+- `public` → `private`: Revoke action (signs and propagates revocation)
+- `unlisted`: Middle ground for sharing via direct link without broadcast
+
+---
+
+## Revocation
+
+When a lesson is unpublished:
+
+```typescript
+interface RevocationRecord {
+  lessonId: string;
+  revokedAt: number;        // Unix ms
+  reason?: string;          // Optional: "outdated", "incorrect", "private"
+  signature: {
+    algorithm: "ed25519";
+    publicKey: string;      // Must match original author
+    signature: string;
+  };
+}
+```
+
+**Revocation propagation:**
+1. Author signs revocation record
+2. Sends to all known peers
+3. Peers verify signature matches original lesson author
+4. Peers delete cached copies, propagate revocation
+5. Directories remove from index
+
+**Revocation is best-effort.** Once something is public, copies may exist. Revocation signals intent and compliant nodes will honor it.
+
+---
+
+## Trust Model
+
+### Web of Trust
+
+Nodes don't trust a central authority. Instead:
+
+```
+Direct trust:     You explicitly mark a node as trusted
+Transitive trust: If you trust A, and A trusts B, you have a path to B
+Trust depth:      How many hops you'll traverse (default: 2)
+Trust score:      Decays with distance: 1.0 → 0.5 → 0.25
+```
+
+### Trust Operations
+
+```bash
+mesh trust add nodeB --level full        # Direct trust
+mesh trust add nodeC --level limited     # Trust for search, not sync
+mesh trust remove nodeD                  # Revoke trust
+mesh trust list                          # Show trust graph
+```
+
+### Trust Verification
+
+Before accepting a lesson from the network:
+
+1. **Signature valid?** — Ed25519 verification passes
+2. **Author trusted?** — Direct or transitive trust path exists
+3. **Not revoked?** — No valid revocation record seen
+4. **Timestamp sane?** — Within acceptable window
+
+Lessons failing verification are **rejected**, not stored.
+
+---
+
+## Directory Security
+
+Directories are **untrusted conveniences**, not authorities.
+
+### What Directories Can Do
+- Index public lessons
+- Return search results
+- Provide node discovery
+
+### What Directories Cannot Do
+- Forge lessons (no private keys)
+- Modify content (signatures break)
+- Hide revocations (nodes gossip directly too)
+- Compel trust (trust is node-to-node)
+
+### Directory Federation
+
+Multiple directories exist. Nodes can:
+- Query multiple directories
+- Run their own directory
+- Operate without any directory (peer-to-peer only)
+
+```bash
+mesh directory add https://dir.example.com
+mesh directory add https://amp-directory.org
+mesh directory list
+mesh directory remove https://evil.example.com
+```
+
+### Directory Accountability
+
+Directories sign their responses. Misbehavior is provable:
+
+```typescript
+interface DirectoryResponse {
+  results: SignedLesson[];
+  directory: {
+    nodeId: string;
+    timestamp: number;
+    signature: string;    // Directory signs the response
+  };
+}
+```
+
+If a directory returns forged results, the forgery is cryptographically evident.
+
+---
+
+## Query Privacy
+
+### The Problem
+Your searches reveal your interests. "How to fix vulnerability X" tells observers you might have vulnerability X.
+
+### Mitigations
+
+**Level 1: TLS**
+- Passive observers see you talking to nodes, not what you're asking
+- Baseline, always on
+
+**Level 2: Query Fanout**
+- Query multiple nodes with different query fragments
+- Combine results locally
+- Observers see multiple partial queries
+
+**Level 3: Private Information Retrieval (Future)**
+- Cryptographic PIR allows queries without revealing the query
+- Computationally expensive, optional for sensitive searches
+
+### Metadata Minimization
+
+MESH nodes should:
+- Not log queries by default
+- Not require authentication for public searches
+- Support Tor/I2P for network-level anonymity
+
+---
+
+## Attack Scenarios & Mitigations
+
+### 1. Impersonation Attack
+**Attack:** Mallory claims to be Alice's node.
+**Mitigation:** All messages signed with Ed25519. Mallory can't forge Alice's signature.
+
+### 2. Replay Attack
+**Attack:** Mallory captures a valid signed lesson, replays it later.
+**Mitigation:** Timestamps in signatures. Nodes reject stale timestamps.
+
+### 3. Sybil Attack
+**Attack:** Mallory creates 1000 fake nodes to dominate the network.
+**Mitigation:** Web of trust. Fake nodes have no trust paths to real users.
+
+### 4. Poisoning Attack
+**Attack:** Mallory publishes plausible but wrong lessons.
+**Mitigation:** Attribution is permanent. Reputation tracks accuracy. Block bad actors.
+
+### 5. Eclipse Attack
+**Attack:** Mallory isolates a node from the real network.
+**Mitigation:** Multiple directory sources. Direct peer connections. Out-of-band verification.
+
+### 6. Censorship Attack
+**Attack:** Compromised directory hides certain lessons.
+**Mitigation:** Multiple directories. Direct peer gossip. Anyone can run a directory.
+
+### 7. Harvest Now, Decrypt Later
+**Attack:** Record encrypted traffic, break crypto in future.
+**Mitigation:** Forward secrecy (ephemeral keys). Lessons are signed, not encrypted—public content isn't secret.
+
+---
+
+## Implementation Checklist
+
+For a MESH implementation to be considered secure:
+
+- [ ] Ed25519 for all signatures
+- [ ] TLS 1.3+ for all connections
+- [ ] Private keys never logged, never transmitted
+- [ ] Signature verification before storing any remote lesson
+- [ ] Trust graph enforced on all queries
+- [ ] Revocation records honored within reasonable time
+- [ ] No query logging by default
+- [ ] Timestamp validation on all signed content
+- [ ] Multiple directory support
+- [ ] Peer-to-peer fallback if directories unavailable
+
+---
+
+## Security Reporting
+
+Found a vulnerability? Please report responsibly:
+
+1. **Do not** open a public GitHub issue
+2. Email: security@[TBD]
+3. Include: Description, reproduction steps, potential impact
+4. We will respond within 48 hours
+5. Coordinated disclosure after fix is available
+
+---
+
+*Security is not a feature. It's the foundation.*
